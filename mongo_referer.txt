@@ -1,0 +1,218 @@
+// Connect to MongoDB database
+use TestDB;
+
+// ===============================================
+// Basic Collection Creation with Data Insertion
+// ===============================================
+
+// Create students collection and insert data
+db.students.insertMany([
+    { name: "John", age: 20, department: "CS" },
+    { name: "Alice", age: 22, department: "IT" },
+    { name: "Bob", age: 23, department: "ECE" },
+    { name: "Eve", age: 21, department: "EE" }
+]);
+
+// Create courses collection and insert data
+db.courses.insertMany([
+    { course_name: "Database Systems" },
+    { course_name: "Operating Systems" },
+    { course_name: "Computer Networks" }
+]);
+
+// ===============================================
+// Basic Select Operations (Queries)
+// ===============================================
+
+// Find all students
+db.students.find();
+
+// Find specific columns (fields)
+db.students.find({}, { name: 1, age: 1, _id: 0 });
+
+// Find students by department
+db.students.find({ department: "CS" });
+
+// ===============================================
+// Update Operations
+// ===============================================
+
+// Update a student's department
+db.students.updateOne(
+    { name: "Alice" },
+    { $set: { department: "Software Engineering" } }
+);
+
+// Update multiple students in the department
+db.students.updateMany(
+    { department: "IT" },
+    { $set: { department: "Data Science" } }
+);
+
+// ===============================================
+// Delete Operations
+// ===============================================
+
+// Delete a student record
+db.students.deleteOne({ name: "Bob" });
+
+// Delete all students from a specific department
+db.students.deleteMany({ department: "EE" });
+
+// ===============================================
+// Aggregation Pipeline
+// ===============================================
+
+// Count the number of students in each department
+db.students.aggregate([
+    { $group: { _id: "$department", count: { $sum: 1 } } }
+]);
+
+// Sort students by age
+db.students.aggregate([
+    { $sort: { age: 1 } }
+]);
+
+// Group by department and calculate average age
+db.students.aggregate([
+    { $group: { _id: "$department", avgAge: { $avg: "$age" } } }
+]);
+
+// ===============================================
+// Joins (Using $lookup to combine collections)
+// ===============================================
+
+// Create student_courses collection to link students with courses
+db.student_courses.insertMany([
+    { student_id: 1, course_id: 1 },  // John enrolled in Database Systems
+    { student_id: 2, course_id: 2 },  // Alice enrolled in Operating Systems
+    { student_id: 3, course_id: 3 },  // Bob enrolled in Computer Networks
+    { student_id: 1, course_id: 3 }   // John also enrolled in Computer Networks
+]);
+
+// Perform a join using $lookup to get student-course information
+db.students.aggregate([
+    {
+        $lookup: {
+            from: "student_courses",
+            localField: "_id",    // field from students collection
+            foreignField: "student_id",  // field from student_courses collection
+            as: "enrolled_courses"  // alias for the joined data
+        }
+    },
+    { $unwind: "$enrolled_courses" },  // Unwind the array from $lookup
+    {
+        $lookup: {
+            from: "courses",
+            localField: "enrolled_courses.course_id",  // reference from student_courses
+            foreignField: "_id",  // reference from courses
+            as: "course_details"
+        }
+    },
+    { $project: { name: 1, course_name: { $arrayElemAt: ["$course_details.course_name", 0] } } }
+]);
+
+// ===============================================
+// Indexing
+// ===============================================
+
+// Create an index on the 'department' field to optimize searches
+db.students.createIndex({ department: 1 });
+
+// ===============================================
+// Transactions
+// ===============================================
+
+// Start a session for a transaction
+const session = db.getMongo().startSession();
+
+session.startTransaction();
+
+// Update multiple students' departments within a transaction
+db.students.updateOne(
+    { name: "John" },
+    { $set: { department: "Mechanical Engineering" } },
+    { session: session }
+);
+
+db.students.updateOne(
+    { name: "Eve" },
+    { $set: { department: "Civil Engineering" } },
+    { session: session }
+);
+
+// Commit the transaction if everything is successful
+session.commitTransaction();
+
+// ===============================================
+// Create and Drop Collections (Similar to tables in SQL)
+// ===============================================
+
+// Drop the student_courses collection
+db.student_courses.drop();
+
+// Drop the students collection
+db.students.drop();
+
+// ===============================================
+// Create and Use Views (for complex queries)
+// ===============================================
+
+// Create a view to get student-course information
+db.createCollection("student_course_view", {
+    viewOn: "students",
+    pipeline: [
+        {
+            $lookup: {
+                from: "student_courses",
+                localField: "_id",
+                foreignField: "student_id",
+                as: "enrolled_courses"
+            }
+        },
+        { $unwind: "$enrolled_courses" },
+        {
+            $lookup: {
+                from: "courses",
+                localField: "enrolled_courses.course_id",
+                foreignField: "_id",
+                as: "course_details"
+            }
+        },
+        { $project: { name: 1, course_name: { $arrayElemAt: ["$course_details.course_name", 0] } } }
+    ]
+});
+
+// Use the view (it behaves like a table)
+db.student_course_view.find();
+
+// ===============================================
+// Subqueries (Embedded in Aggregation)
+// ===============================================
+
+// Find students enrolled in 'Database Systems' course (subquery)
+db.students.aggregate([
+    {
+        $lookup: {
+            from: "student_courses",
+            localField: "_id",
+            foreignField: "student_id",
+            as: "enrolled_courses"
+        }
+    },
+    {
+        $match: {
+            "enrolled_courses.course_id": {
+                $in: [
+                    db.courses.findOne({ course_name: "Database Systems" })._id
+                ]
+            }
+        }
+    },
+    { $project: { name: 1, department: 1 } }
+]);
+
+// ===============================================
+// Drop Database (if required)
+// ===============================================
+db.dropDatabase();

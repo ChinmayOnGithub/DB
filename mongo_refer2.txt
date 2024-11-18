@@ -1,0 +1,104 @@
+# MongoDB Cheatsheet
+
+# -------------------------------
+# 1. Database Commands
+# -------------------------------
+
+# View all databases
+show dbs
+
+# Create or switch to a database
+use dbName
+
+# View current database
+db
+
+# Delete the current database
+db.dropDatabase()
+
+# -------------------------------
+# 2. Collection Commands
+# -------------------------------
+
+# Show all collections in the database
+show collections
+
+# Create a collection named 'comments'
+db.createCollection('comments')
+
+# Drop the collection named 'comments'
+db.comments.drop()
+
+# -------------------------------
+# 3. Document (Row) Commands
+# -------------------------------
+
+# Show all documents in the collection
+db.comments.find()
+
+# Show all documents in the collection (formatted output)
+db.comments.find().pretty()
+
+# Find the first document matching a query
+db.comments.findOne({name: 'Harry'})
+
+# Insert a single document
+db.comments.insert({
+    'name': 'Harry',
+    'lang': 'JavaScript',
+    'member_since': 5
+})
+
+# Insert multiple documents
+db.comments.insertMany([
+    {'name': 'Harry', 'lang': 'JavaScript', 'member_since': 5},
+    {'name': 'Rohan', 'lang': 'Python', 'member_since': 3},
+    {'name': 'Lovish', 'lang': 'Java', 'member_since': 4}
+])
+
+# Search for documents matching a query
+db.comments.find({lang: 'Python'})
+
+# Limit the number of documents in the output
+db.comments.find().limit(2)
+
+# Count the number of documents in the output
+db.comments.find().count()
+
+# Update a document (single row)
+db.comments.updateOne(
+    {name: 'Shubham'},
+    {$set: {'name': 'Harry', 'lang': 'JavaScript', 'member_since': 51}},
+    {upsert: true}
+)
+
+# Increment a field value
+db.comments.update(
+    {name: 'Rohan'},
+    {$inc: {member_since: 2}}
+)
+
+# Rename a field
+db.comments.update(
+    {name: 'Rohan'},
+    {$rename: {member_since: 'member'}}
+)
+
+# Delete a document
+db.comments.remove({name: 'Harry'})
+
+# -------------------------------
+# 4. Query Operators
+# -------------------------------
+
+# Find documents with 'member_since' less than a value
+db.comments.find({member_since: {$lt: 90}})
+
+# Find documents with 'member_since' less than or equal to a value
+db.comments.find({member_since: {$lte: 90}})
+
+# Find documents with 'member_since' greater than a value
+db.comments.find({member_since: {$gt: 90}})
+
+# Find documents with 'member_since' greater than or equal to a value
+db.comments.find({member_since: {$gte: 90}})

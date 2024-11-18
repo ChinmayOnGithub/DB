@@ -1,0 +1,5 @@
+set CLASSPATH=.;C:\mysql-connector-j-9.1.0.jar
+echo %CLASSPATH%
+java -cp ".;C:\mysql-connector-j-9.1.0.jar" JDBCsql
+
+classpath .;C:\mysql-connector-j-9.1.0.jar
